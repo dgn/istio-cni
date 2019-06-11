@@ -88,6 +88,23 @@ var conf = `{
     }
     }`
 
+var confNoPrevResult = `{
+    "cniVersion": "0.3.0",
+	"name": "istio-plugin-sample-test",
+	"type": "sample",
+    "runtimeconfig": {
+         "sampleconfig": []
+    },
+    "loglevel": "debug",
+    "kubernetes": {
+        "k8sapiroot": "APIRoot",
+        "kubeconfig": "testK8sConfig",
+        "nodename": "testNodeName",
+        "excludenamespaces": "testNS",
+        "cnibindir": "/testDirectory"
+    }
+    }`
+
 func mockNsenterRedirect(netns string, ports []string) error {
 	nsenterFuncCalled = true
 	return nil
@@ -151,14 +168,18 @@ func testCmdInvalidVersion(t *testing.T, f func(args *skel.CmdArgs) error) {
 }
 
 func testCmdAdd(t *testing.T) {
+	cniConf := fmt.Sprintf(conf, currentVersion, ifname, sandboxDirectory)
+	testCmdAddWithStdinData(t, cniConf)
+}
+
+func testCmdAddWithStdinData(t *testing.T, stdinData string) {
 	newKubeClient = mocknewK8sClient
 	getKubePodInfo = mockgetK8sPodInfo
 
-	cniConf := fmt.Sprintf(conf, currentVersion, ifname, sandboxDirectory)
-	args := testSetArgs(cniConf)
+	args := testSetArgs(stdinData)
 
 	result, _, err := testutils.CmdAddWithResult(
-		sandboxDirectory, ifname, []byte(cniConf), func() error { return cmdAdd(args) })
+		sandboxDirectory, ifname, []byte(stdinData), func() error { return cmdAdd(args) })
 
 	if err != nil {
 		t.Fatalf("failed with error: %v", err)
@@ -263,7 +284,11 @@ func TestCmdAddWithKubevirtInterfaces(t *testing.T) {
 func TestCmdAddInvalidK8sArgsKeyword(t *testing.T) {
 	defer resetGlobalTestVariables()
 
+	origK8Args := k8Args
 	k8Args = "K8S_POD_NAMESPACE_InvalidKeyword=istio-system"
+	defer func() {
+		k8Args = origK8Args
+	}()
 
 	cniConf := fmt.Sprintf(conf, currentVersion, ifname, sandboxDirectory)
 	args := testSetArgs(cniConf)
@@ -283,39 +308,22 @@ func TestCmdAddInvalidVersion(t *testing.T) {
 }
 
 func TestCmdAddNoPrevResult(t *testing.T) {
-	var confNoPrevResult = `{
-    "cniVersion": "0.3.0",
-	"name": "istio-plugin-sample-test",
-	"type": "sample",
-    "runtimeconfig": {
-         "sampleconfig": []
-    },
-    "loglevel": "debug",
-    "kubernetes": {
-        "k8sapiroot": "APIRoot",
-        "kubeconfig": "testK8sConfig",
-        "nodename": "testNodeName",
-        "excludenamespaces": "testNS",
-        "cnibindir": "/testDirectory"
-    }
-    }`
+	defer resetGlobalTestVariables()
+	testCmdAddWithStdinData(t, confNoPrevResult)
+}
 
-	args := testSetArgs(confNoPrevResult)
-
-	err := cmdAdd(args)
-	if err != nil {
-		if !strings.Contains(err.Error(), "must be called as chained plugin") {
-			t.Fatalf("expected substring error 'must be called as chained plugin', got: %v", err)
-		}
-	} else {
-		t.Fatalf("expected failed no PrevResult, got: no error")
-	}
+func TestCmdDelNoPrevResult(t *testing.T) {
+	defer resetGlobalTestVariables()
+	testCmdDelWithStdinData(t, confNoPrevResult)
 }
 
 func TestCmdDel(t *testing.T) {
 	cniConf := fmt.Sprintf(conf, currentVersion, ifname, sandboxDirectory)
-	args := testSetArgs(cniConf)
+	testCmdDelWithStdinData(t, cniConf)
+}
 
+func testCmdDelWithStdinData(t *testing.T, stdinData string) {
+	args := testSetArgs(stdinData)
 	err := cmdDel(args)
 	if err != nil {
 		t.Fatalf("failed with error: %v", err)
