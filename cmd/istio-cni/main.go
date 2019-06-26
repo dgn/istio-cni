@@ -50,6 +50,7 @@ type Kubernetes struct {
 	NodeName          string   `json:"node_name"`
 	ExcludeNamespaces []string `json:"exclude_namespaces"`
 	CniBinDir         string   `json:"cni_bin_dir"`
+	IptablesScript    string   `json:"iptables_script"`
 }
 
 // PluginConf is whatever you expect your configuration json to be. This is whatever
@@ -159,6 +160,9 @@ func cmdAdd(args *skel.CmdArgs) error {
 	logrus.Infof("Loaded k8s arguments: %v", k8sArgs)
 	if conf.Kubernetes.CniBinDir != "" {
 		nsSetupBinDir = conf.Kubernetes.CniBinDir
+	}
+	if conf.Kubernetes.IptablesScript != "" {
+		nsSetupProg = conf.Kubernetes.IptablesScript
 	}
 
 	logger := logrus.WithFields(logrus.Fields{

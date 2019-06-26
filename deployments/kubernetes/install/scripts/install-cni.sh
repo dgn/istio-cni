@@ -18,7 +18,7 @@ exit_with_error(){
 
 function rm_bin_files() {
   echo "Removing existing binaries"
-  rm -f /host/opt/cni/bin/istio-cni /host/opt/cni/bin/istio-iptables.sh
+  rm -f /host/opt/cni/bin/${CNI_BINARIES_PREFIX}istio-cni /host/opt/cni/bin/${CNI_BINARIES_PREFIX}istio-iptables.sh
 }
 # find_cni_conf_file
 #   Finds the CNI config file in the mounted CNI config dir.
@@ -63,14 +63,14 @@ function check_install() {
   fi
   if [ -e "${MOUNTED_CNI_NET_DIR}/${CNI_CONF_NAME}" ]; then
     if [ "${CHAINED_CNI_PLUGIN}" == "true" ]; then
-      istiocni_conf=$(cat ${MOUNTED_CNI_NET_DIR}/${CNI_CONF_NAME} | jq '.plugins[]? | select(.type == "istio-cni")')
+      istiocni_conf=$(cat ${MOUNTED_CNI_NET_DIR}/${CNI_CONF_NAME} | jq '.plugins[]? | select(.type == "${CNI_BINARIES_PREFIX}istio-cni")')
       if [[ "$istiocni_conf" == "" ]]; then
         echo "ERROR: istio-cni CNI config removed from file: \"${MOUNTED_CNI_NET_DIR}/${CNI_CONF_NAME}\""
         exit 1
       fi
     else
       istiocni_conf_name=$(cat ${MOUNTED_CNI_NET_DIR}/${CNI_CONF_NAME} | jq -r '.name')
-      if [[ "$istiocni_conf_name" != "istio-cni" ]]; then
+      if [[ "$istiocni_conf_name" != "${CNI_BINARIES_PREFIX}istio-cni" ]]; then
         echo "ERROR: istio-cni CNI config file modified: \"${MOUNTED_CNI_NET_DIR}/${CNI_CONF_NAME}\""
         exit 1
       fi
@@ -86,7 +86,7 @@ function cleanup() {
 
   if [ -e "${MOUNTED_CNI_NET_DIR}/${CNI_CONF_NAME}" ]; then
     echo "Removing istio-cni config from CNI chain config in ${MOUNTED_CNI_NET_DIR}/${CNI_CONF_NAME}"
-    CNI_CONF_DATA=$(cat ${MOUNTED_CNI_NET_DIR}/${CNI_CONF_NAME} | jq 'del( .plugins[]? | select(.type == "istio-cni"))')
+    CNI_CONF_DATA=$(cat ${MOUNTED_CNI_NET_DIR}/${CNI_CONF_NAME} | jq 'del( .plugins[]? | select(.type == "${CNI_BINARIES_PREFIX}istio-cni"))')
     echo "${CNI_CONF_DATA}" > ${MOUNTED_CNI_NET_DIR}/${CNI_CONF_NAME}
   fi
   if [ -e "${MOUNTED_CNI_NET_DIR}/${KUBECFG_FILE_NAME}" ]; then
@@ -130,6 +130,7 @@ rm_bin_files
 SKIP_CNI_BINARIES=${SKIP_CNI_BINARIES:-""}
 SKIP_CNI_BINARIES=",$SKIP_CNI_BINARIES,"
 UPDATE_CNI_BINARIES=${UPDATE_CNI_BINARIES:-"true"}
+CNI_BINARIES_PREFIX=${CNI_BINARIES_PREFIX:-""}
 
 # Place the new binaries if the directory is writeable.
 for dir in /host/opt/cni/bin /host/secondary-bin-dir
@@ -141,19 +142,20 @@ do
   fi
   for path in /opt/cni/bin/*;
   do
-    filename="$(basename $path)"
-    tmp=",$filename,"
+    srcFilename="$(basename $path)"
+    targetFilename="${CNI_BINARIES_PREFIX}${srcFilename}"
+    tmp=",$srcFilename,"
     if [ "${SKIP_CNI_BINARIES#*$tmp}" != "$SKIP_CNI_BINARIES" ];
     then
-      echo "$filename is in SKIP_CNI_BINARIES, skipping"
+      echo "$srcFilename is in SKIP_CNI_BINARIES, skipping"
       continue
     fi
-    if [ "${UPDATE_CNI_BINARIES}" != "true" -a -f $dir/$filename ];
+    if [ "${UPDATE_CNI_BINARIES}" != "true" -a -f $dir/$targetFilename ];
     then
-      echo "$dir/$filename is already here and UPDATE_CNI_BINARIES isn't true, skipping"
+      echo "$dir/$targetFilename is already here and UPDATE_CNI_BINARIES isn't true, skipping"
       continue
     fi
-    cp $path $dir/ || exit_with_error "Failed to copy $path to $dir. This may be caused by selinux configuration on the host, or something else."
+    cp $path $dir/$targetFilename || exit_with_error "Failed to copy $path to $dir. This may be caused by selinux configuration on the host, or something else."
   done
 
   echo "Wrote Istio CNI binaries to $dir"
