@@ -54,12 +54,12 @@ func newK8sClient(conf PluginConf, logger *logrus.Entry) (*kubernetes.Clientset,
 }
 
 // getK8sPodInfo returns information of a POD
-func getK8sPodInfo(client *kubernetes.Clientset, podName, podNamespace string) (containers []string,
-	labels map[string]string, annotations map[string]string, ports []string, err error) {
+func getK8sPodInfo(client *kubernetes.Clientset, podName, podNamespace string) (hasProxy bool, containers []string,
+	labels map[string]string, annotations map[string]string, ports []string, proxyUID, proxyGID *int64, err error) {
 	pod, err := client.CoreV1().Pods(string(podNamespace)).Get(podName, metav1.GetOptions{})
 	logrus.Infof("pod info %+v", pod)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return false, nil, nil, nil, nil, nil, nil, err
 	}
 
 	containers = make([]string, len(pod.Spec.Containers))
@@ -71,6 +71,10 @@ func getK8sPodInfo(client *kubernetes.Clientset, podName, podNamespace string) (
 		containers[containerIdx] = container.Name
 
 		if container.Name == "istio-proxy" {
+			hasProxy = true
+			proxyUID = container.SecurityContext.RunAsUser
+			proxyGID = container.SecurityContext.RunAsGroup
+
 			// don't include ports from istio-proxy in the redirect ports
 			continue
 		}
@@ -90,5 +94,5 @@ func getK8sPodInfo(client *kubernetes.Clientset, podName, podNamespace string) (
 		}
 	}
 
-	return containers, pod.Labels, pod.Annotations, ports, nil
+	return hasProxy, containers, pod.Labels, pod.Annotations, ports, proxyUID, proxyGID,nil
 }

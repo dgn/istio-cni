@@ -186,12 +186,12 @@ func cmdAdd(args *skel.CmdArgs) error {
 				return err
 			}
 			logrus.WithField("client", client).Debug("Created Kubernetes client")
-			containers, _, annotations, ports, k8sErr := getKubePodInfo(client, string(k8sArgs.K8S_POD_NAME), string(k8sArgs.K8S_POD_NAMESPACE))
+			hasProxy, containers, _, annotations, ports, proxyUID, proxyGID, k8sErr := getKubePodInfo(client, string(k8sArgs.K8S_POD_NAME), string(k8sArgs.K8S_POD_NAMESPACE))
 			if k8sErr != nil {
 				logger.Warnf("Error geting Pod data %v", k8sErr)
 			}
 			logger.Infof("Found containers %v", containers)
-			if len(containers) > 1 {
+			if hasProxy && len(containers) > 1 {
 				logrus.WithFields(logrus.Fields{
 					"ContainerID": args.ContainerID,
 					"netns":       args.Netns,
@@ -215,7 +215,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 				}
 				if !excludePod {
 					logrus.Infof("setting up redirect")
-					if redirect, redirErr := NewRedirect(ports, annotations, logger); redirErr != nil {
+					if redirect, redirErr := NewRedirect(proxyUID, proxyGID, ports, annotations, logger); redirErr != nil {
 						logger.Errorf("Pod redirect failed due to bad params: %v", redirErr)
 					} else {
 						if setupRedirect != nil {

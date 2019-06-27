@@ -177,7 +177,7 @@ func getAnnotationOrDefault(name string, annotations map[string]string) (isFound
 }
 
 // NewRedirect returns a new Redirect Object constructed from a list of ports and annotations
-func NewRedirect(ports []string, annotations map[string]string, logger *logrus.Entry) (*Redirect, error) {
+func NewRedirect(proxyUID, proxyGID *int64, ports []string, annotations map[string]string, logger *logrus.Entry) (*Redirect, error) {
 	var isFound bool
 	var valErr error
 
@@ -189,7 +189,11 @@ func NewRedirect(ports []string, annotations map[string]string, logger *logrus.E
 		logger.Errorf("Annotation value error for value %s; annotationFound = %t: %v",
 			"redirectMode", isFound, valErr)
 	}
-	redir.noRedirectUID = defaultNoRedirectUID
+	if proxyUID == nil {
+		redir.noRedirectUID = defaultNoRedirectUID
+	} else {
+		redir.noRedirectUID = strconv.FormatInt(*proxyUID, 10)
+	}
 	isFound, redir.includeIPCidrs, valErr = getAnnotationOrDefault("includeIPCidrs", annotations)
 	if valErr != nil {
 		logger.Errorf("Annotation value error for value %s; annotationFound = %t: %v",
