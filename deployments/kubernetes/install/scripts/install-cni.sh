@@ -85,9 +85,13 @@ function cleanup() {
   echo "Cleaning up and exiting."
 
   if [ -e "${MOUNTED_CNI_NET_DIR}/${CNI_CONF_NAME}" ]; then
-    echo "Removing istio-cni config from CNI chain config in ${MOUNTED_CNI_NET_DIR}/${CNI_CONF_NAME}"
-    CNI_CONF_DATA=$(cat ${MOUNTED_CNI_NET_DIR}/${CNI_CONF_NAME} | jq 'del( .plugins[]? | select(.type == "${CNI_BINARIES_PREFIX}istio-cni"))')
-    echo "${CNI_CONF_DATA}" > ${MOUNTED_CNI_NET_DIR}/${CNI_CONF_NAME}
+    if [ "${CHAINED_CNI_PLUGIN}" == "true" ]; then
+      echo "Removing istio-cni config from CNI chain config in ${MOUNTED_CNI_NET_DIR}/${CNI_CONF_NAME}"
+      CNI_CONF_DATA=$(cat ${MOUNTED_CNI_NET_DIR}/${CNI_CONF_NAME} | jq 'del( .plugins[]? | select(.type == "${CNI_BINARIES_PREFIX}istio-cni"))')
+      echo "${CNI_CONF_DATA}" > ${MOUNTED_CNI_NET_DIR}/${CNI_CONF_NAME}
+    else
+      echo "Removing istio-cni net.d conf file: ${MOUNTED_CNI_NET_DIR}/${CNI_CONF_NAME}"
+    fi
   fi
   if [ -e "${MOUNTED_CNI_NET_DIR}/${KUBECFG_FILE_NAME}" ]; then
     echo "Removing istio-cni kubeconfig file: ${MOUNTED_CNI_NET_DIR}/${KUBECFG_FILE_NAME}"
