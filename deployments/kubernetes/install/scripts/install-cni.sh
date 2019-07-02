@@ -91,6 +91,7 @@ function cleanup() {
       echo "${CNI_CONF_DATA}" > ${MOUNTED_CNI_NET_DIR}/${CNI_CONF_NAME}
     else
       echo "Removing istio-cni net.d conf file: ${MOUNTED_CNI_NET_DIR}/${CNI_CONF_NAME}"
+      rm ${MOUNTED_CNI_NET_DIR}/${CNI_CONF_NAME}
     fi
   fi
   if [ -e "${MOUNTED_CNI_NET_DIR}/${KUBECFG_FILE_NAME}" ]; then
