@@ -165,17 +165,20 @@ func cmdAdd(args *skel.CmdArgs) error {
 		nsSetupProg = conf.Kubernetes.IptablesScript
 	}
 
+	podName := string(k8sArgs.K8S_POD_NAME)
+	podNamespace := string(k8sArgs.K8S_POD_NAMESPACE)
+
 	logger := logrus.WithFields(logrus.Fields{
 		"ContainerID": args.ContainerID,
-		"Pod":         string(k8sArgs.K8S_POD_NAME),
-		"Namespace":   string(k8sArgs.K8S_POD_NAMESPACE),
+		"Pod":         podName,
+		"Namespace":   podNamespace,
 	})
 
 	// Check if the workload is running under Kubernetes.
-	if string(k8sArgs.K8S_POD_NAMESPACE) != "" && string(k8sArgs.K8S_POD_NAME) != "" {
+	if podNamespace != "" && podName != "" {
 		excludePod := false
 		for _, excludeNs := range conf.Kubernetes.ExcludeNamespaces {
-			if string(k8sArgs.K8S_POD_NAMESPACE) == excludeNs {
+			if podNamespace == excludeNs {
 				excludePod = true
 				break
 			}
@@ -186,7 +189,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 				return err
 			}
 			logrus.WithField("client", client).Debug("Created Kubernetes client")
-			hasProxy, containers, _, annotations, ports, proxyUID, proxyGID, k8sErr := getKubePodInfo(client, string(k8sArgs.K8S_POD_NAME), string(k8sArgs.K8S_POD_NAMESPACE))
+			hasProxy, containers, _, annotations, ports, proxyUID, proxyGID, k8sErr := getKubePodInfo(client, podName, podNamespace)
 			if k8sErr != nil {
 				logger.Warnf("Error geting Pod data %v", k8sErr)
 			}
@@ -195,13 +198,13 @@ func cmdAdd(args *skel.CmdArgs) error {
 				logrus.WithFields(logrus.Fields{
 					"ContainerID": args.ContainerID,
 					"netns":       args.Netns,
-					"pod":         string(k8sArgs.K8S_POD_NAME),
-					"Namespace":   string(k8sArgs.K8S_POD_NAMESPACE),
+					"pod":         podName,
+					"Namespace":   podNamespace,
 					"ports":       ports,
 					"annotations": annotations,
 				}).Infof("Checking annotations prior to redirect for Istio proxy")
 				if val, ok := annotations[injectAnnotationKey]; ok {
-					logrus.Infof("Pod %s contains inject annotation: %s", string(k8sArgs.K8S_POD_NAME), val)
+					logrus.Infof("Pod %s contains inject annotation: %s", podName, val)
 					if injectEnabled, err := strconv.ParseBool(val); err == nil {
 						if !injectEnabled {
 							logrus.Infof("Pod excluded due to inject-disabled annotation")
@@ -210,7 +213,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 					}
 				}
 				if _, ok := annotations[sidecarStatusKey]; !ok {
-					logrus.Infof("Pod %s excluded due to not containing sidecar annotation", string(k8sArgs.K8S_POD_NAME))
+					logrus.Infof("Pod %s excluded due to not containing sidecar annotation", podName)
 					excludePod = true
 				}
 				if !excludePod {
