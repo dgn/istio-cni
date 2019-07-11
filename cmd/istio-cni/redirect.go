@@ -186,7 +186,7 @@ func NewRedirect(proxyUID, proxyGID *int64, ports []string, annotations map[stri
 	redir.targetPort = defaultRedirectToPort
 	isFound, redir.redirectMode, valErr = getAnnotationOrDefault("redirectMode", annotations)
 	if valErr != nil {
-		logger.Errorf("Annotation value error for value %s; annotationFound = %t: %v",
+		return nil, fmt.Errorf("Annotation value error for value %s; annotationFound = %t: %v",
 			"redirectMode", isFound, valErr)
 	}
 	if proxyUID == nil {
@@ -196,30 +196,30 @@ func NewRedirect(proxyUID, proxyGID *int64, ports []string, annotations map[stri
 	}
 	isFound, redir.includeIPCidrs, valErr = getAnnotationOrDefault("includeIPCidrs", annotations)
 	if valErr != nil {
-		logger.Errorf("Annotation value error for value %s; annotationFound = %t: %v",
+		return nil, fmt.Errorf("Annotation value error for value %s; annotationFound = %t: %v",
 			"includeIPCidrs", isFound, valErr)
 	}
 	isFound, redir.includePorts, valErr = getAnnotationOrDefault("includePorts", annotations)
 	if !isFound || valErr != nil {
 		redir.includePorts = strings.Join(ports, ",")
 		if valErr != nil {
-			logger.Errorf("Annotation value error for redirect ports, using ContainerPorts=\"%s\": %v",
+			return nil, fmt.Errorf("Annotation value error for redirect ports, using ContainerPorts=\"%s\": %v",
 				redir.includePorts, valErr)
 		}
 	}
 	isFound, redir.excludeIPCidrs, valErr = getAnnotationOrDefault("excludeIPCidrs", annotations)
 	if valErr != nil {
-		logger.Errorf("Annotation value error for value %s; annotationFound = %t: %v",
+		return nil, fmt.Errorf("Annotation value error for value %s; annotationFound = %t: %v",
 			"excludeIPCidrs", isFound, valErr)
 	}
 	isFound, redir.excludePorts, valErr = getAnnotationOrDefault("excludePorts", annotations)
 	if valErr != nil {
-		logger.Errorf("Annotation value error for value %s; annotationFound = %t: %v",
+		return nil, fmt.Errorf("Annotation value error for value %s; annotationFound = %t: %v",
 			"excludePorts", isFound, valErr)
 	}
 	isFound, redir.kubevirtInterfaces, valErr = getAnnotationOrDefault("kubevirtInterfaces", annotations)
 	if valErr != nil {
-		logger.Errorf("Annotation value error for value %s; annotationFound = %t: %v",
+		return nil, fmt.Errorf("Annotation value error for value %s; annotationFound = %t: %v",
 			"kubevirtInterfaces", isFound, valErr)
 	}
 

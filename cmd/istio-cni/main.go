@@ -189,9 +189,10 @@ func cmdAdd(args *skel.CmdArgs) error {
 				return err
 			}
 			logrus.WithField("client", client).Debug("Created Kubernetes client")
-			hasProxy, containers, _, annotations, ports, proxyUID, proxyGID, k8sErr := getKubePodInfo(client, podName, podNamespace)
-			if k8sErr != nil {
-				logger.Warnf("Error geting Pod data %v", k8sErr)
+			hasProxy, containers, _, annotations, ports, proxyUID, proxyGID, err := getKubePodInfo(client, podName, podNamespace)
+			if err != nil {
+				logger.Errorf("Error getting Pod data %v", err)
+				return err
 			}
 			logger.Infof("Found containers %v", containers)
 			if hasProxy && len(containers) > 1 {
@@ -203,6 +204,7 @@ func cmdAdd(args *skel.CmdArgs) error {
 					"ports":       ports,
 					"annotations": annotations,
 				}).Infof("Checking annotations prior to redirect for Istio proxy")
+
 				if val, ok := annotations[injectAnnotationKey]; ok {
 					logrus.Infof("Pod %s contains inject annotation: %s", podName, val)
 					if injectEnabled, err := strconv.ParseBool(val); err == nil {
@@ -218,8 +220,9 @@ func cmdAdd(args *skel.CmdArgs) error {
 				}
 				if !excludePod {
 					logrus.Infof("setting up redirect")
-					if redirect, redirErr := NewRedirect(proxyUID, proxyGID, ports, annotations, logger); redirErr != nil {
-						logger.Errorf("Pod redirect failed due to bad params: %v", redirErr)
+					if redirect, err := NewRedirect(proxyUID, proxyGID, ports, annotations, logger); err != nil {
+						logger.Errorf("Pod redirect failed due to bad params: %v", err)
+						return err
 					} else {
 						if setupRedirect != nil {
 							_ = setupRedirect(args.Netns, ports)
