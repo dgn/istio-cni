@@ -126,16 +126,16 @@ KUBECFG_FILE_NAME=${KUBECFG_FILE_NAME:-ZZZ-istio-cni-kubeconfig}
 CFGCHECK_INTERVAL=${CFGCHECK_INTERVAL:-1}
 
 
-trap cleanup EXIT
-
-# Clean up any existiang binaries / config / assets.
-rm_bin_files
-
 # Choose which default cni binaries should be copied
 SKIP_CNI_BINARIES=${SKIP_CNI_BINARIES:-""}
 SKIP_CNI_BINARIES=",$SKIP_CNI_BINARIES,"
 UPDATE_CNI_BINARIES=${UPDATE_CNI_BINARIES:-"true"}
 CNI_BINARIES_PREFIX=${CNI_BINARIES_PREFIX:-""}
+
+trap cleanup EXIT
+
+# Clean up any existing binaries / config / assets.
+rm_bin_files
 
 # Place the new binaries if the directory is writeable.
 for dir in /host/opt/cni/bin /host/secondary-bin-dir
